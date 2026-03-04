@@ -17,12 +17,13 @@ const ESTADOS: Array<{ value: EstadoPresupuesto | 'todos'; label: string }> = [
 export default function PresupuestoList() {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filtro, setFiltro] = useState<EstadoPresupuesto | 'todos'>('todos');
 
   useEffect(() => {
     getPresupuestos()
       .then(setPresupuestos)
-      .catch(console.error)
+      .catch(err => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -60,6 +61,12 @@ export default function PresupuestoList() {
       </div>
 
       {/* Lista */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm mb-4">
+          <strong>Error Firebase:</strong> {error}
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-16 text-gray-400">Cargando...</div>
       ) : filtrados.length === 0 ? (
