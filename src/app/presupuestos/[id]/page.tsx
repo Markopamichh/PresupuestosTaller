@@ -60,7 +60,6 @@ export default function PresupuestoDetailPage() {
     `Hola ${presupuesto.cliente}, aquí tu presupuesto N°${numero} por ${totalFmt}`
   );
   const whatsappUrl = `https://wa.me/${presupuesto.telefono.replace(/\D/g, '')}?text=${whatsappText}`;
-  const mailtoUrl = `mailto:${presupuesto.email}?subject=${encodeURIComponent(`Presupuesto N°${numero}`)}&body=${encodeURIComponent(`Estimado/a ${presupuesto.cliente},\n\nAdjuntamos el presupuesto N°${numero} por un importe de ${totalFmt}.\n\nQuedamos a su disposición.\n\nUn saludo.`)}`;
 
   return (
     <div className="max-w-3xl">
@@ -76,7 +75,7 @@ export default function PresupuestoDetailPage() {
         <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
           <div className="min-w-0">
             <p className="text-xs text-gray-400 font-mono">N° {numero} · {fecha}</p>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 break-words">{presupuesto.cliente}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 wrap-break-words">{presupuesto.cliente}</h2>
             {presupuesto.vehiculo && (
               <p className="text-gray-500 text-sm mt-0.5">{presupuesto.vehiculo}</p>
             )}
@@ -101,11 +100,6 @@ export default function PresupuestoDetailPage() {
               WhatsApp
             </Button>
           </a>
-          <a href={mailtoUrl}>
-            <Button variant="secondary">
-              Email
-            </Button>
-          </a>
           <a href={`/api/pdf/${id}`} target="_blank">
             <Button>
               Generar PDF
@@ -120,7 +114,7 @@ export default function PresupuestoDetailPage() {
           Servicios / Piezas
         </h3>
         <div className="overflow-x-auto -mx-6 px-6">
-        <table className="w-full min-w-[380px] text-sm">
+        <table className="w-full min-w-95 text-sm">
           <thead>
             <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
               <th className="pb-2 font-medium">Descripción</th>

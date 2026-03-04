@@ -32,7 +32,7 @@ export default function ItemsTable({ items, onChange }: Props) {
   return (
     <div className="mt-4">
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="bg-[#e8f0fe] text-[#1e3a5f]">
               <th className="text-left px-3 py-2 font-semibold">Descripción</th>

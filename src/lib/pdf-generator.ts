@@ -16,6 +16,24 @@ export async function generarPresupuestoPDF(presupuesto: Presupuesto): Promise<U
   const colorOscuro = rgb(0.1, 0.1, 0.1);
   const colorAzul = rgb(0.118, 0.227, 0.373);
 
+  // Tapar logo viejo del template con rectángulo blanco
+  page.drawRectangle({
+    x: 0, y: 700, width: 370, height: 142,
+    color: rgb(1, 1, 1),
+  });
+
+  // Logo nuevo
+  const logoPath = path.join(process.cwd(), 'public', 'imagenes', 'logo pdf.png');
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const logoDims = logoImage.scaleToFit(230, 115);
+  page.drawImage(logoImage, {
+    x: 30,
+    y: 840 - logoDims.height,
+    width: logoDims.width,
+    height: logoDims.height,
+  });
+
   // Datos del cliente
   page.drawText(presupuesto.cliente,  { ...PDF_COORDS.cliente,  font, color: colorOscuro });
   page.drawText(presupuesto.telefono, { ...PDF_COORDS.telefono, font, color: colorOscuro });
