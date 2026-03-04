@@ -2,90 +2,192 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Presupuesto } from '@/types/presupuesto';
-import { PDF_COORDS } from './pdf-coordinates';
+
+const NAVY      = rgb(0.118, 0.227, 0.373);
+const WHITE     = rgb(1, 1, 1);
+const DARK      = rgb(0.12, 0.12, 0.12);
+const GRAY_BG   = rgb(0.94, 0.95, 0.97);
+const LINE_CLR  = rgb(0.80, 0.82, 0.86);
+const BLUE_SOFT = rgb(0.70, 0.80, 0.91);
+const GRAY_TEXT = rgb(0.50, 0.50, 0.50);
 
 export async function generarPresupuestoPDF(presupuesto: Presupuesto): Promise<Uint8Array> {
-  // Cargar template desde /public (server-side)
-  const templatePath = path.join(process.cwd(), 'public', 'template-presupuesto.pdf');
-  const templateBytes = fs.readFileSync(templatePath);
-
-  const pdfDoc = await PDFDocument.load(templateBytes);
-  const page = pdfDoc.getPages()[0];
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const pdfDoc   = await PDFDocument.create();
+  const page     = pdfDoc.addPage([595, 842]); // A4
+  const font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const colorOscuro = rgb(0.1, 0.1, 0.1);
-  const colorAzul = rgb(0.118, 0.227, 0.373);
 
-  // Tapar logo viejo del template con rectángulo blanco
-  page.drawRectangle({
-    x: 0, y: 700, width: 370, height: 142,
-    color: rgb(1, 1, 1),
-  });
+  // ── LOGO ───────────────────────────────────────────────────────
+  const logoPath  = path.join(process.cwd(), 'public', 'imagenes', 'logo pdf.png');
+  const logoImage = await pdfDoc.embedPng(fs.readFileSync(logoPath));
+  const logoDims  = logoImage.scaleToFit(100, 100);
 
-  // Logo nuevo
-  const logoPath = path.join(process.cwd(), 'public', 'imagenes', 'logo pdf.png');
-  const logoBytes = fs.readFileSync(logoPath);
-  const logoImage = await pdfDoc.embedPng(logoBytes);
-  const logoDims = logoImage.scaleToFit(230, 115);
+  // ── HEADER (fondo navy) ────────────────────────────────────────
+  const HH = 115;          // alto del header
+  const HY = 842 - HH;    // y=727
+
+  page.drawRectangle({ x: 0, y: HY, width: 595, height: HH, color: NAVY });
+
+  // Logo centrado verticalmente, pegado a la derecha
   page.drawImage(logoImage, {
-    x: 30,
-    y: 840 - logoDims.height,
+    x: 552 - logoDims.width,
+    y: HY + (HH - logoDims.height) / 2,
     width: logoDims.width,
     height: logoDims.height,
   });
 
-  // Datos del cliente
-  page.drawText(presupuesto.cliente,  { ...PDF_COORDS.cliente,  font, color: colorOscuro });
-  page.drawText(presupuesto.telefono, { ...PDF_COORDS.telefono, font, color: colorOscuro });
-  page.drawText(presupuesto.email,    { ...PDF_COORDS.email,    font, color: colorOscuro });
-  page.drawText(presupuesto.vehiculo, { ...PDF_COORDS.vehiculo, font, color: colorOscuro });
-
-  const fechaFormateada = new Date(presupuesto.fecha).toLocaleDateString('es-ES');
-  page.drawText(fechaFormateada, { ...PDF_COORDS.fecha, font, color: colorOscuro });
-  page.drawText(`N° ${String(presupuesto.numero).padStart(4, '0')}`, {
-    ...PDF_COORDS.numero, font: fontBold, color: colorAzul,
+  // Nombre del taller
+  page.drawText('Taller Integral Emmanuel', {
+    x: 40, y: HY + 78, size: 18, font: fontBold, color: WHITE,
+  });
+  page.drawText('2995461930 - 2995219854  |  Sarmiento 849, Neuquén', {
+    x: 40, y: HY + 52, size: 10, font, color: BLUE_SOFT,
   });
 
-  // Items en tabla
-  const { startY, rowHeight, cols, size } = PDF_COORDS.items;
-  presupuesto.items.forEach((item, i) => {
-    const y = startY - i * rowHeight;
-    if (y < 110) return; // límite 1 página
+  // ── BANDA "PRESUPUESTO" (fondo gris claro) ─────────────────────
+  const BH = 52;
+  const BY = HY - BH; // y=675
+
+  page.drawRectangle({ x: 0, y: BY, width: 595, height: BH, color: GRAY_BG });
+
+  page.drawText('PRESUPUESTO', {
+    x: 40, y: BY + 17, size: 20, font: fontBold, color: NAVY,
+  });
+
+  // N° (derecha)
+  const numero = String(presupuesto.numero).padStart(4, '0');
+  page.drawText('N°',    { x: 350, y: BY + 37, size: 10, font: fontBold, color: NAVY });
+  page.drawText(numero,  { x: 372, y: BY + 37, size: 13, font: fontBold, color: NAVY });
+
+  // Fecha (derecha, abajo de N°)
+  const fechaStr = new Date(presupuesto.fecha).toLocaleDateString('es-ES');
+  page.drawText('Fecha:', { x: 350, y: BY + 15, size: 10, font: fontBold, color: NAVY });
+  page.drawText(fechaStr, { x: 397, y: BY + 15, size: 10, font, color: DARK });
+
+  // ── DATOS DEL CLIENTE ──────────────────────────────────────────
+  const campos = [
+    { label: 'Cliente:',   value: presupuesto.cliente   || '' },
+    { label: 'Teléfono:', value: presupuesto.telefono  || '' },
+    { label: 'Email:',    value: presupuesto.email     || '' },
+    { label: 'Vehículo:', value: presupuesto.vehiculo  || '' },
+  ];
+
+  const CL_Y   = BY - 22; // y=653 — primera fila de cliente
+  const CL_ROW = 26;
+
+  campos.forEach(({ label, value }, i) => {
+    const y = CL_Y - i * CL_ROW;
+    page.drawText(label, { x: 40, y, size: 10, font: fontBold, color: NAVY });
+    page.drawText(value, { x: 118, y, size: 10, font, color: DARK });
+    // Línea guía debajo del valor
+    page.drawLine({
+      start: { x: 118, y: y - 4 }, end: { x: 555, y: y - 4 },
+      thickness: 0.4, color: LINE_CLR,
+    });
+  });
+
+  // ── TABLA ──────────────────────────────────────────────────────
+  const TL  = 40;   // left
+  const TR  = 555;  // right
+  const TW  = TR - TL; // 515
+  const RH  = 22;   // alto de cada fila
+  const MAX = 12;   // máximo de filas visibles
+
+  // T_TOP: justo debajo de la sección cliente
+  const T_TOP = CL_Y - (campos.length - 1) * CL_ROW - CL_ROW - 18;
+
+  // Columnas
+  const C_DESC = TL + 5;
+  const C_CANT = TL + Math.round(TW * 0.61);
+  const C_PU   = TL + Math.round(TW * 0.72);
+  const C_SUB  = TL + Math.round(TW * 0.85);
+
+  // Header de la tabla
+  page.drawRectangle({ x: TL, y: T_TOP - RH, width: TW, height: RH, color: NAVY });
+  ([ [C_DESC, 'DESCRIPCIÓN'], [C_CANT, 'CANT.'], [C_PU, 'P. UNIT.'], [C_SUB, 'SUBTOTAL'] ] as [number, string][])
+    .forEach(([x, txt]) => {
+      page.drawText(txt, { x, y: T_TOP - RH + 7, size: 9, font: fontBold, color: WHITE });
+    });
+
+  // Separadores verticales de columnas en el header
+  [C_CANT - 5, C_PU - 5, C_SUB - 5].forEach(x => {
+    page.drawLine({
+      start: { x, y: T_TOP - RH }, end: { x, y: T_TOP },
+      thickness: 0.3, color: rgb(0.3, 0.45, 0.6),
+    });
+  });
+
+  // Filas (siempre dibuja MAX para aspecto uniforme)
+  const T_BOT = T_TOP - RH - MAX * RH;
+
+  for (let i = 0; i < MAX; i++) {
+    const rY   = T_TOP - RH - (i + 1) * RH;
+    const item = presupuesto.items[i];
 
     // Fondo alternado
-    if (i % 2 === 0) {
-      page.drawRectangle({
-        x: 30, y: y - 5, width: 535, height: rowHeight,
-        color: rgb(0.98, 0.99, 1),
-      });
+    if (i % 2 === 1) {
+      page.drawRectangle({ x: TL, y: rY, width: TW, height: RH, color: GRAY_BG });
     }
 
-    page.drawText(item.descripcion.substring(0, 45), {
-      x: cols.descripcion, y, size, font, color: colorOscuro,
-    });
-    page.drawText(String(item.cantidad), {
-      x: cols.cantidad, y, size, font, color: colorOscuro,
-    });
-    page.drawText(`$${item.precio.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, {
-      x: cols.precio, y, size, font, color: colorOscuro,
-    });
-    page.drawText(`$${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, {
-      x: cols.subtotal, y, size, font, color: colorOscuro,
+    // Línea inferior de la fila
+    page.drawLine({
+      start: { x: TL, y: rY }, end: { x: TR, y: rY },
+      thickness: 0.3, color: LINE_CLR,
     });
 
-    // Línea divisoria entre filas
-    page.drawLine({
-      start: { x: 30, y: y - 5 },
-      end:   { x: 565, y: y - 5 },
-      thickness: 0.3,
-      color: rgb(0.85, 0.85, 0.85),
-    });
+    // Texto si hay item
+    if (item) {
+      const tY = rY + 7;
+      page.drawText(item.descripcion.substring(0, 52), { x: C_DESC, y: tY, size: 9, font, color: DARK });
+      page.drawText(String(item.cantidad),             { x: C_CANT, y: tY, size: 9, font, color: DARK });
+      page.drawText(
+        `$${item.precio.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        { x: C_PU, y: tY, size: 9, font, color: DARK }
+      );
+      page.drawText(
+        `$${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        { x: C_SUB, y: tY, size: 9, font, color: DARK }
+      );
+    }
+  }
+
+  // Borde exterior de la tabla
+  page.drawLine({ start: { x: TL, y: T_TOP }, end: { x: TR, y: T_TOP }, thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TL, y: T_BOT }, end: { x: TR, y: T_BOT }, thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TL, y: T_BOT }, end: { x: TL, y: T_TOP }, thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TR, y: T_BOT }, end: { x: TR, y: T_TOP }, thickness: 0.5, color: LINE_CLR });
+
+  // Separadores verticales en filas
+  [C_CANT - 5, C_PU - 5, C_SUB - 5].forEach(x => {
+    page.drawLine({ start: { x, y: T_BOT }, end: { x, y: T_TOP - RH }, thickness: 0.3, color: LINE_CLR });
   });
 
-  // Total
-  page.drawText('TOTAL:', { ...PDF_COORDS.totalLabel, font: fontBold, color: colorAzul });
-  page.drawText(`$${presupuesto.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, {
-    ...PDF_COORDS.totalVal, font: fontBold, color: colorAzul,
+  // ── TOTAL ──────────────────────────────────────────────────────
+  const TOT_W = Math.round(TW * 0.45);
+  const TOT_X = TR - TOT_W;
+  const TOT_Y = T_BOT - 6;
+
+  page.drawRectangle({ x: TOT_X, y: TOT_Y - 30, width: TOT_W, height: 30, color: GRAY_BG });
+  page.drawLine({ start: { x: TOT_X, y: TOT_Y },      end: { x: TR, y: TOT_Y },      thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TOT_X, y: TOT_Y - 30 }, end: { x: TR, y: TOT_Y - 30 }, thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TOT_X, y: TOT_Y - 30 }, end: { x: TOT_X, y: TOT_Y },   thickness: 0.5, color: LINE_CLR });
+  page.drawLine({ start: { x: TR,    y: TOT_Y - 30 }, end: { x: TR, y: TOT_Y },       thickness: 0.5, color: LINE_CLR });
+
+  page.drawText('TOTAL:', {
+    x: TOT_X + 12, y: TOT_Y - 20, size: 12, font: fontBold, color: NAVY,
+  });
+  page.drawText(
+    `$${presupuesto.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    { x: TOT_X + 78, y: TOT_Y - 20, size: 12, font: fontBold, color: NAVY }
+  );
+
+  // ── FOOTER ─────────────────────────────────────────────────────
+  page.drawLine({ start: { x: 40, y: 60 }, end: { x: 555, y: 60 }, thickness: 0.4, color: LINE_CLR });
+  page.drawText('Taller Integral Emmanuel  ·  Sarmiento 849, Neuquén  ·  Tel: 2995461930 - 2995219854', {
+    x: 40, y: 46, size: 8, font, color: GRAY_TEXT,
+  });
+  page.drawText('Este presupuesto tiene una validez de 30 días desde su fecha de emisión.', {
+    x: 40, y: 33, size: 8, font, color: GRAY_TEXT,
   });
 
   return pdfDoc.save();
