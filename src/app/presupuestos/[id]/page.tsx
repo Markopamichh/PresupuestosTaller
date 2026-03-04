@@ -151,7 +151,7 @@ export default function PresupuestoDetailPage() {
             value={presupuesto.estado}
             onChange={e => handleEstado(e.target.value as EstadoPresupuesto)}
             disabled={updatingEstado}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 bg-white text-gray-900"
           >
             <option value="pendiente">Pendiente</option>
             <option value="aprobado">Aprobado</option>
