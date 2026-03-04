@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Presupuesto, EstadoPresupuesto } from '@/types/presupuesto';
+import { getPresupuestos } from '@/services/presupuestos.service';
 import PresupuestoCard from './PresupuestoCard';
 import Button from '@/components/ui/Button';
 
@@ -13,8 +14,17 @@ const ESTADOS: Array<{ value: EstadoPresupuesto | 'todos'; label: string }> = [
   { value: 'rechazado', label: 'Rechazados' },
 ];
 
-export default function PresupuestoList({ presupuestos }: { presupuestos: Presupuesto[] }) {
+export default function PresupuestoList() {
+  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<EstadoPresupuesto | 'todos'>('todos');
+
+  useEffect(() => {
+    getPresupuestos()
+      .then(setPresupuestos)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtrados = filtro === 'todos'
     ? presupuestos
@@ -23,8 +33,8 @@ export default function PresupuestoList({ presupuestos }: { presupuestos: Presup
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-2">
           {ESTADOS.map(e => (
             <button
               key={e.value}
@@ -39,8 +49,8 @@ export default function PresupuestoList({ presupuestos }: { presupuestos: Presup
             </button>
           ))}
         </div>
-        <Link href="/presupuestos/nuevo">
-          <Button>
+        <Link href="/presupuestos/nuevo" className="sm:shrink-0">
+          <Button className="w-full sm:w-auto justify-center">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -50,7 +60,9 @@ export default function PresupuestoList({ presupuestos }: { presupuestos: Presup
       </div>
 
       {/* Lista */}
-      {filtrados.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-gray-400">Cargando...</div>
+      ) : filtrados.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <svg className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}

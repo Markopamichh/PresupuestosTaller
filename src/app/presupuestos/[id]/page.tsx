@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Presupuesto, EstadoPresupuesto } from '@/types/presupuesto';
+import { getPresupuesto, actualizarPresupuesto, eliminarPresupuesto } from '@/services/presupuestos.service';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 
@@ -15,27 +16,23 @@ export default function PresupuestoDetailPage() {
   const [updatingEstado, setUpdatingEstado] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/presupuestos/${id}`)
-      .then(r => r.json())
+    getPresupuesto(id)
       .then(setPresupuesto)
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
 
   const handleEstado = async (estado: EstadoPresupuesto) => {
     if (!presupuesto) return;
     setUpdatingEstado(true);
-    await fetch(`/api/presupuestos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado }),
-    });
+    await actualizarPresupuesto(id, { estado });
     setPresupuesto({ ...presupuesto, estado });
     setUpdatingEstado(false);
   };
 
   const handleEliminar = async () => {
     if (!confirm('¿Eliminar este presupuesto?')) return;
-    await fetch(`/api/presupuestos/${id}`, { method: 'DELETE' });
+    await eliminarPresupuesto(id);
     router.push('/');
   };
 
@@ -76,10 +73,10 @@ export default function PresupuestoDetailPage() {
 
       {/* Header tarjeta */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div className="min-w-0">
             <p className="text-xs text-gray-400 font-mono">N° {numero} · {fecha}</p>
-            <h2 className="text-2xl font-bold text-gray-900 mt-1">{presupuesto.cliente}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 break-words">{presupuesto.cliente}</h2>
             {presupuesto.vehiculo && (
               <p className="text-gray-500 text-sm mt-0.5">{presupuesto.vehiculo}</p>
             )}
@@ -122,11 +119,12 @@ export default function PresupuestoDetailPage() {
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
           Servicios / Piezas
         </h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto -mx-6 px-6">
+        <table className="w-full min-w-[380px] text-sm">
           <thead>
             <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
               <th className="pb-2 font-medium">Descripción</th>
-              <th className="pb-2 font-medium text-right w-16">Cant.</th>
+              <th className="pb-2 font-medium text-right w-14">Cant.</th>
               <th className="pb-2 font-medium text-right w-24">P. Unit.</th>
               <th className="pb-2 font-medium text-right w-24">Subtotal</th>
             </tr>
@@ -142,6 +140,7 @@ export default function PresupuestoDetailPage() {
             ))}
           </tbody>
         </table>
+        </div>
 
         {/* Totales */}
         <div className="flex items-center justify-end gap-8 mt-4 pt-4 border-t border-gray-100 text-base font-bold text-[#1e3a5f]">
@@ -151,7 +150,7 @@ export default function PresupuestoDetailPage() {
       </div>
 
       {/* Estado + acciones */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">Estado:</span>
           <select

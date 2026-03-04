@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ItemPresupuesto, PresupuestoInput } from '@/types/presupuesto';
+import { crearPresupuesto } from '@/services/presupuestos.service';
 import ItemsTable from './ItemsTable';
 import Button from '@/components/ui/Button';
 
@@ -50,14 +51,8 @@ export default function PresupuestoForm() {
         total,
         estado: 'pendiente',
       };
-      const res = await fetch('/api/presupuestos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar');
-      router.push(`/presupuestos/${data.id}`);
+      const id = await crearPresupuesto(payload);
+      router.push(`/presupuestos/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar el presupuesto.');
       setSaving(false);
