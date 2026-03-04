@@ -16,6 +16,8 @@ export async function POST(request: Request) {
     const id = await crearPresupuesto(body);
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Error al crear presupuesto' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[POST /api/presupuestos]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

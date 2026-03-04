@@ -55,19 +55,19 @@ export default function PresupuestoForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Error al guardar');
-      const { id } = await res.json();
-      router.push(`/presupuestos/${id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      router.push(`/presupuestos/${data.id}`);
     } catch (err) {
-      setError('Error al guardar el presupuesto. Intenta de nuevo.');
+      setError(err instanceof Error ? err.message : 'Error al guardar el presupuesto.');
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 max-w-3xl">
       {/* Datos cliente */}
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
           Datos del cliente
         </h2>
@@ -115,7 +115,7 @@ export default function PresupuestoForm() {
       </section>
 
       {/* Items */}
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">
           Servicios / Piezas
         </h2>
@@ -123,7 +123,7 @@ export default function PresupuestoForm() {
       </section>
 
       {/* Totales */}
-      <section className="bg-white rounded-xl border border-gray-200 p-6">
+      <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
         <div className="flex items-center justify-end gap-8 text-sm">
           <span className="font-semibold text-[#1e3a5f]">TOTAL</span>
           <span className="font-bold text-lg text-[#1e3a5f] w-36 text-right">
